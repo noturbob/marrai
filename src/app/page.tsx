@@ -1,246 +1,377 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 
-// ── Types ──────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 type SubmitState = "idle" | "loading" | "success" | "error";
 
-// ── Platform Cycler ────────────────────────────────
-const PLATFORMS = ["ChatGPT", "Perplexity", "Gemini", "Claude"];
+// ── Platform cycler ─────────────────────────────────────────────────────────
+const PLATFORMS = ["ChatGPT", "Perplexity", "Gemini", "Claude", "Grok"];
 
 function PlatformCycler() {
-  const [current, setCurrent] = useState(0);
-  const [animClass, setAnimClass] = useState("platform-enter");
+  const [idx, setIdx] = useState(0);
+  const [out, setOut] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimClass("platform-exit");
-      setTimeout(() => {
-        setCurrent((c) => (c + 1) % PLATFORMS.length);
-        setAnimClass("platform-enter");
-      }, 320);
-    }, 2200);
-    return () => clearInterval(interval);
+    const t = setInterval(() => {
+      setOut(true);
+      setTimeout(() => { setIdx(i => (i + 1) % PLATFORMS.length); setOut(false); }, 300);
+    }, 2000);
+    return () => clearInterval(t);
   }, []);
 
   return (
-    <span
-      className={`font-display inline-block ${animClass}`}
-      style={{ color: "var(--purple-bright)", minWidth: "160px", display: "inline-block" }}
-    >
-      {PLATFORMS[current]}
-    </span>
+    <span style={{
+      display: "inline-block",
+      color: "var(--purple-bright)",
+      opacity: out ? 0 : 1,
+      transform: out ? "translateY(-10px)" : "translateY(0)",
+      transition: "opacity 0.28s ease, transform 0.28s ease",
+      minWidth: 130,
+    }}>{PLATFORMS[idx]}</span>
   );
 }
 
-// ── Animated Counter ───────────────────────────────
-function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
-  const [val, setVal] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          const duration = 1400;
-          const startTime = performance.now();
-          const tick = (now: number) => {
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const ease = 1 - Math.pow(1 - progress, 3);
-            setVal(Math.round(ease * end));
-            if (progress < 1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [end]);
-
-  return (
-    <span ref={ref}>
-      {val}
-      {suffix}
-    </span>
-  );
-}
-
-// ── Citation Bar ────────────────────────────────────
-function CitationBar({ pct, color }: { pct: number; color: string }) {
-  const [width, setWidth] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setWidth(pct); },
-      { threshold: 0.3 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [pct]);
-
-  return (
-    <div ref={ref} className="citation-bar" style={{ flex: 1 }}>
-      <div className="citation-bar-fill" style={{ width: `${width}%`, background: color }} />
-    </div>
-  );
-}
-
-// ── Waitlist Form ───────────────────────────────────
-function WaitlistForm({ compact = false }: { compact?: boolean }) {
+// ── Waitlist form ────────────────────────────────────────────────────────────
+function WaitlistForm({ size = "normal" }: { size?: "normal" | "compact" }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<SubmitState>("idle");
-  const [msg, setMsg] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!email) return;
     setState("loading");
-    // Simulate API — swap for real /api/waitlist call
-    await new Promise((r) => setTimeout(r, 900));
+    await new Promise(r => setTimeout(r, 900));
     setState("success");
-    setMsg("You're on the list. We'll be in touch.");
   }
 
-  if (state === "success") {
-    return (
-      <div
-        className="pill pill-purple"
-        style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
-      >
-        <span className="pill-dot" /> {msg}
-      </div>
-    );
-  }
+  if (state === "success") return (
+    <div style={{
+      display: "inline-flex", alignItems: "center", gap: "0.5rem",
+      padding: "0.5rem 1.25rem",
+      background: "rgba(124,58,237,0.15)",
+      border: "1px solid rgba(124,58,237,0.35)",
+      borderRadius: 9999,
+      fontSize: "0.85rem", color: "#C4B5FD", fontWeight: 500,
+    }}>
+      <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#A855F7", flexShrink: 0 }} />
+      You&apos;re on the list — we&apos;ll be in touch.
+    </div>
+  );
+
+  const isCompact = size === "compact";
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        display: "flex",
-        gap: "0.5rem",
-        flexDirection: compact ? "row" : "column",
-        width: "100%",
-        maxWidth: compact ? "480px" : "400px",
-      }}
-    >
+    <form onSubmit={submit} style={{
+      display: "flex", gap: "0.5rem",
+      flexDirection: isCompact ? "row" : "row",
+      width: "100%", maxWidth: isCompact ? 420 : 400,
+    }}>
       <input
         className="input-waitlist"
-        type="email"
-        placeholder="you@brand.com"
+        type="email" required
+        placeholder="your@brand.com"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
+        onChange={e => setEmail(e.target.value)}
         style={{ flex: 1 }}
       />
       <button className="btn-primary" type="submit" disabled={state === "loading"}>
-        {state === "loading" ? "Adding…" : "Join Waitlist"}
-        {state === "idle" && (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
+        {state === "loading" ? "Adding…" : "Join waitlist"}
       </button>
-      {state === "error" && (
-        <p style={{ color: "var(--danger)", fontSize: "0.8rem" }}>{msg}</p>
-      )}
     </form>
   );
 }
 
-// ── Step card ───────────────────────────────────────
-function Step({ n, title, body }: { n: string; title: string; body: string }) {
+// ── FAQ accordion ────────────────────────────────────────────────────────────
+const FAQS = [
+  {
+    q: "What is Marrai?",
+    a: "Marrai is India's first AEO (Answer Engine Optimization) monitoring platform. We track how your brand is represented across AI answer engines like ChatGPT, Perplexity, Gemini, and Claude including which sites get cited instead of yours.",
+  },
+  {
+    q: "Who is Marrai for?",
+    a: "Marketing leaders at mid-to-large Indian D2C and digitally-native companies CMOs, Heads of Marketing, VP Growth who are already invested in SEO and starting to notice unexplained traffic drops they can't attribute to Google alone.",
+  },
+  {
+    q: "What is the citation gap?",
+    a: "The citation gap is when your brand is mentioned by AI platforms but your own website is never actually cited as a source. Instead, third-party sites like YouTube, Reddit, and review aggregators capture the citations and the traffic. We measure exactly how wide that gap is.",
+  },
+  {
+    q: "How is this different from SEO?",
+    a: "Traditional SEO optimises for Google's ranking algorithm, which is relatively stable and deterministic. AI answers are probabilistic and change constantly. Marrai monitors AI-specific signals: schema markup, FAQPage structured data, content answerability, and citation authority across AI platforms.",
+  },
+  {
+    q: "When does Marrai launch?",
+    a: "We're in early research and prototyping. We're auditing 10 major Indian brands as proof-of-concept. Early access members get a free audit before launch. Join the waitlist and you'll hear from us first.",
+  },
+];
+
+function FAQ() {
+  const [open, setOpen] = useState<number | null>(null);
   return (
-    <div className="card" style={{ padding: "1.75rem", flex: 1, minWidth: 240 }}>
-      <div
-        style={{
-          width: 36,
-          height: 36,
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      {FAQS.map((faq, i) => (
+        <div key={i} style={{
+          border: "1px solid",
+          borderColor: open === i ? "rgba(124,58,237,0.3)" : "rgba(255,255,255,0.07)",
           borderRadius: "var(--radius-md)",
-          background: "var(--purple-dim)",
-          border: "1px solid var(--border)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "0.8rem",
-          fontWeight: 700,
-          color: "var(--purple-bright)",
-          marginBottom: "1rem",
-          fontFamily: "var(--font-display)",
-        }}
-      >
-        {n}
-      </div>
-      <p
-        className="font-display"
-        style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.5rem" }}
-      >
-        {title}
-      </p>
-      <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-        {body}
-      </p>
+          background: open === i ? "rgba(124,58,237,0.06)" : "rgba(255,255,255,0.02)",
+          transition: "all 0.2s ease",
+          overflow: "hidden",
+        }}>
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            style={{
+              width: "100%", display: "flex", alignItems: "center",
+              justifyContent: "space-between", gap: "1rem",
+              padding: "1.1rem 1.5rem",
+              background: "none", border: "none", cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ fontSize: "0.95rem", fontWeight: 500, color: "var(--text)" }}>{faq.q}</span>
+            <span style={{
+              width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+              border: "1px solid rgba(255,255,255,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "var(--text-muted)", fontSize: "1rem", lineHeight: 1,
+              transform: open === i ? "rotate(45deg)" : "none",
+              transition: "transform 0.2s ease",
+            }}>+</span>
+          </button>
+          {open === i && (
+            <div style={{ padding: "0 1.5rem 1.1rem", fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.7 }}>
+              {faq.a}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
 
-// ── Main Page ───────────────────────────────────────
+// ── Animated counter ─────────────────────────────────────────────────────────
+function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
+  const [val, setVal] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !started.current) {
+        started.current = true;
+        const dur = 1400, t0 = performance.now();
+        const tick = (now: number) => {
+          const p = Math.min((now - t0) / dur, 1);
+          setVal(Math.round((1 - Math.pow(1 - p, 3)) * end));
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }, { threshold: 0.3 });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [end]);
+  return <span ref={ref}>{val}{suffix}</span>;
+}
+
+// ── Mini dashboard mockup (hero visual) ──────────────────────────────────────
+function DashboardMockup() {
+  const rows = [
+    { query: "best earbuds under ₹2000", mentioned: true, cited: false, platform: "ChatGPT" },
+    { query: "boAt vs JBL sound quality", mentioned: true, cited: false, platform: "Perplexity" },
+    { query: "is boAt good quality", mentioned: true, cited: true, platform: "ChatGPT" },
+    { query: "best audio brand for gym", mentioned: false, cited: false, platform: "Gemini" },
+    { query: "should I buy boAt earbuds", mentioned: true, cited: false, platform: "Perplexity" },
+    { query: "wireless earbuds India 2024", mentioned: true, cited: false, platform: "Claude" },
+  ];
+
+  return (
+    <div style={{
+      background: "#0d0d12",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: 12,
+      overflow: "hidden",
+      fontSize: 11,
+      boxShadow: "0 40px 120px rgba(124,58,237,0.25), 0 0 0 1px rgba(255,255,255,0.04)",
+    }}>
+      {/* toolbar */}
+      <div style={{
+        background: "#111116", borderBottom: "1px solid rgba(255,255,255,0.06)",
+        padding: "10px 16px", display: "flex", alignItems: "center", gap: 8,
+      }}>
+        <div style={{ display: "flex", gap: 5 }}>
+          {["#ff5f57","#febc2e","#28c840"].map(c => (
+            <div key={c} style={{ width: 9, height: 9, borderRadius: "50%", background: c }} />
+          ))}
+        </div>
+        <div style={{
+          flex: 1, background: "rgba(255,255,255,0.05)", borderRadius: 4,
+          height: 20, display: "flex", alignItems: "center", paddingLeft: 8,
+          color: "#3F3F46", fontSize: 10,
+        }}>marrai.com/dashboard</div>
+      </div>
+
+      {/* header row */}
+      <div style={{
+        padding: "12px 16px 8px", display: "flex", alignItems: "center",
+        justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.04)",
+      }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: "-0.02em" }}>boAt — AEO Monitor</div>
+          <div style={{ color: "#71717A", fontSize: 10, marginTop: 1 }}>43 queries · ChatGPT + Perplexity · Jun 2025</div>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[
+            { label: "Mention rate", value: "65%", color: "#A855F7" },
+            { label: "Citation rate", value: "16%", color: "#EF4444" },
+          ].map(s => (
+            <div key={s.label} style={{
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 6, padding: "5px 10px", textAlign: "center",
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: s.color, letterSpacing: "-0.02em" }}>{s.value}</div>
+              <div style={{ color: "#3F3F46", fontSize: 9 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* column headers */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "1fr 80px 60px 72px",
+        padding: "6px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)",
+        color: "#3F3F46", fontSize: 9, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase",
+      }}>
+        <div>Query</div><div>Platform</div><div>Mentioned</div><div>Cited</div>
+      </div>
+
+      {/* rows */}
+      {rows.map((r, i) => (
+        <div key={i} style={{
+          display: "grid", gridTemplateColumns: "1fr 80px 60px 72px",
+          padding: "7px 16px", alignItems: "center",
+          borderBottom: "1px solid rgba(255,255,255,0.03)",
+          background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
+        }}>
+          <div style={{ color: "#A1A1AA", fontSize: 10 }}>{r.query}</div>
+          <div>
+            <span style={{
+              fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 9999,
+              background: "rgba(124,58,237,0.15)", color: "#C4B5FD",
+              border: "1px solid rgba(124,58,237,0.25)",
+            }}>{r.platform}</span>
+          </div>
+          <div>
+            {r.mentioned
+              ? <span style={{ color: "#A855F7", fontWeight: 700, fontSize: 11 }}>✓</span>
+              : <span style={{ color: "#3F3F46", fontSize: 11 }}>—</span>}
+          </div>
+          <div>
+            {r.cited
+              ? <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 11 }}>✓</span>
+              : <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 600 }}>✗ 3rd party</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Feature card mockup: Citation gap ──────────────────────────────────────
+function CitationGapCard() {
+  const items = [
+    { name: "YouTube", pct: 23.5, w: "78%", color: "#A855F7" },
+    { name: "Reddit", pct: 16.7, w: "56%", color: "#818CF8" },
+    { name: "Gadgets360", pct: 6.2, w: "21%", color: "#6366F1" },
+    { name: "boAt.com", pct: 0, w: "0%", color: "#EF4444" },
+  ];
+  return (
+    <div style={{ padding: "1.5rem" }}>
+      <div style={{ fontSize: 10, color: "#71717A", marginBottom: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Citation sources — Perplexity</div>
+      {items.map(item => (
+        <div key={item.name} style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 11 }}>
+            <span style={{ color: item.name === "boAt.com" ? "#EF4444" : "#A1A1AA", fontWeight: item.name === "boAt.com" ? 700 : 400 }}>{item.name}</span>
+            <span style={{ color: item.color, fontWeight: 700 }}>{item.pct}%</span>
+          </div>
+          <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 9999 }}>
+            <div style={{ height: "100%", width: item.w, background: item.color, borderRadius: 9999,
+              boxShadow: `0 0 6px ${item.color}66` }} />
+          </div>
+        </div>
+      ))}
+      <div style={{
+        marginTop: 14, padding: "8px 10px", background: "rgba(239,68,68,0.08)",
+        border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, fontSize: 10, color: "#FCA5A5",
+      }}>
+        boAt feeds AI answer engines but captures <strong style={{ color: "#EF4444" }}>0% of citations</strong> on Perplexity.
+      </div>
+    </div>
+  );
+}
+
+// ── Feature card mockup: Mention monitor ──────────────────────────────────
+function MentionCard() {
+  const platforms = [
+    { name: "ChatGPT", rate: 65, color: "#A855F7" },
+    { name: "Perplexity", rate: 53, color: "#818CF8" },
+    { name: "Gemini", rate: 41, color: "#6366F1" },
+    { name: "Claude", rate: 38, color: "#8B5CF6" },
+  ];
+  return (
+    <div style={{ padding: "1.5rem" }}>
+      <div style={{ fontSize: 10, color: "#71717A", marginBottom: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Mention rate by platform</div>
+      {platforms.map(p => (
+        <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <span style={{ fontSize: 10, color: "#71717A", width: 70, flexShrink: 0 }}>{p.name}</span>
+          <div style={{ flex: 1, height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 9999 }}>
+            <div style={{ height: "100%", width: `${p.rate}%`, background: p.color, borderRadius: 9999,
+              boxShadow: `0 0 6px ${p.color}66`, transition: "width 1.2s ease" }} />
+          </div>
+          <span style={{ fontSize: 10, fontWeight: 700, color: p.color, width: 30, textAlign: "right" }}>{p.rate}%</span>
+        </div>
+      ))}
+      <div style={{
+        marginTop: 14, display: "flex", gap: 8,
+      }}>
+        {[{ l: "43 queries", c: "#A855F7" }, { l: "5 query types", c: "#818CF8" }].map(b => (
+          <span key={b.l} style={{
+            fontSize: 9, fontWeight: 600, padding: "3px 8px", borderRadius: 9999,
+            background: `${b.c}18`, border: `1px solid ${b.c}44`, color: b.c,
+          }}>{b.l}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function Home() {
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
+    <div style={{ background: "var(--bg)", minHeight: "100vh", overflowX: "hidden" }}>
 
       {/* ── NAV ── */}
-      <nav
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-          background: "rgba(9,9,11,0.8)",
-          backdropFilter: "blur(16px)",
-          borderBottom: "1px solid var(--border-subtle)",
-          padding: "0 1.5rem",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1080,
-            margin: "0 auto",
-            height: 60,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <span
-            className="font-display"
-            style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.02em" }}
-          >
-            marrai
-            <span style={{ color: "var(--purple-bright)" }}>.</span>
+      <nav style={{
+        position: "sticky", top: 0, zIndex: 50,
+        background: "rgba(9,9,11,0.75)",
+        backdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+      }}>
+        <div style={{
+          maxWidth: 1100, margin: "0 auto", padding: "0 1.5rem",
+          height: 60, display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <span className="font-display" style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.025em" }}>
+            marrai<span style={{ color: "var(--purple-bright)" }}>.</span>
           </span>
-          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-            <a
-              href="#how-it-works"
-              style={{ fontSize: "0.85rem", color: "var(--text-muted)", textDecoration: "none" }}
-            >
-              How it works
-            </a>
-            <a
-              href="#audit"
-              style={{ fontSize: "0.85rem", color: "var(--text-muted)", textDecoration: "none" }}
-            >
-              Research
-            </a>
-            <a
-              href="#waitlist"
-              className="btn-primary"
-              style={{ padding: "0.45rem 1rem", fontSize: "0.8rem" }}
-            >
+          <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
+            <a href="#features" style={{ fontSize: "0.875rem", color: "var(--text-muted)", textDecoration: "none" }}>Features</a>
+            <Link href="/audit" style={{ fontSize: "0.875rem", color: "var(--text-muted)", textDecoration: "none" }}>Audit tool</Link>
+            <a href="#faq" style={{ fontSize: "0.875rem", color: "var(--text-muted)", textDecoration: "none" }}>FAQ</a>
+          </div>
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+            <a href="#waitlist" className="btn-primary" style={{ padding: "0.5rem 1.25rem", fontSize: "0.85rem", textDecoration: "none" }}>
               Get early access
             </a>
           </div>
@@ -248,556 +379,291 @@ export default function Home() {
       </nav>
 
       {/* ── HERO ── */}
-      <section
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          padding: "7rem 1.5rem 6rem",
-          textAlign: "center",
-        }}
-      >
-        <div className="aura-hero" />
+      <section style={{ position: "relative", textAlign: "center", padding: "5rem 1.5rem 0", overflow: "hidden" }}>
+        {/* directional glow FROM BELOW like Wope — sits behind the mockup */}
+        <div style={{
+          position: "absolute",
+          bottom: 0, left: "50%", transform: "translateX(-50%)",
+          width: 900, height: 500,
+          background: "radial-gradient(ellipse at 50% 100%, rgba(124,58,237,0.45) 0%, rgba(109,40,217,0.2) 35%, transparent 65%)",
+          filter: "blur(48px)",
+          pointerEvents: "none", zIndex: 0,
+        }} />
+        {/* top subtle glow */}
+        <div style={{
+          position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+          width: 600, height: 200,
+          background: "radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.15) 0%, transparent 70%)",
+          pointerEvents: "none", zIndex: 0,
+        }} />
 
         <div style={{ position: "relative", zIndex: 1, maxWidth: 760, margin: "0 auto" }}>
-          {/* eyebrow */}
-          <div className="pill pill-purple reveal" style={{ marginBottom: "1.75rem", display: "inline-flex" }}>
+          <div className="pill pill-purple" style={{ marginBottom: "1.5rem", display: "inline-flex" }}>
             <span className="pill-dot" />
             India&apos;s first AEO monitoring platform
           </div>
 
-          {/* headline */}
-          <h1
-            className="font-display reveal reveal-delay-1"
-            style={{
-              fontSize: "clamp(2.4rem, 6vw, 4.2rem)",
-              fontWeight: 800,
-              lineHeight: 1.08,
-              letterSpacing: "-0.03em",
-              marginBottom: "1.5rem",
-            }}
-          >
-            Your brand is cited on{" "}
-            <PlatformCycler />
-            <br />
-            <span style={{ color: "var(--text-muted)" }}>
-              but does your site get the credit?
-            </span>
+          <h1 className="font-display" style={{
+            fontSize: "clamp(2.6rem, 6vw, 4.5rem)",
+            fontWeight: 800, lineHeight: 1.06,
+            letterSpacing: "-0.035em",
+            marginBottom: "1.25rem",
+          }}>
+            Is <PlatformCycler /> citing<br />your brand or your rival?
           </h1>
 
-          {/* sub */}
-          <p
-            className="reveal reveal-delay-2"
-            style={{
-              fontSize: "1.1rem",
-              color: "var(--text-muted)",
-              maxWidth: 540,
-              margin: "0 auto 2.5rem",
-              lineHeight: 1.65,
-            }}
-          >
-            AI answer engines are intercepting your search traffic. Marrai tracks
-            every mention, every citation gap, and every domain stealing your
-            authority across ChatGPT, Perplexity, Gemini, and Claude.
+          <p style={{
+            fontSize: "1.1rem", color: "var(--text-muted)",
+            maxWidth: 500, margin: "0 auto 2.25rem", lineHeight: 1.65,
+          }}>
+            AI answer engines intercept your search traffic and cite whoever they want. Marrai shows you exactly where your brand stands and what to fix.
           </p>
 
-          {/* form */}
-          <div
-            className="reveal reveal-delay-3"
-            style={{ display: "flex", justifyContent: "center" }}
-            id="waitlist"
-          >
+          <div id="waitlist" style={{ display: "flex", justifyContent: "center", marginBottom: "0.75rem" }}>
             <WaitlistForm />
           </div>
-
-          <p
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--text-subtle)",
-              marginTop: "0.75rem",
-            }}
-          >
-            Free audit for early access members · No credit card required
+          <p style={{ fontSize: "0.75rem", color: "var(--text-subtle)" }}>
+            Free audit for early members · No credit card required
           </p>
+        </div>
+
+        {/* Hero dashboard mockup */}
+        <div style={{
+          position: "relative", zIndex: 1,
+          maxWidth: 820, margin: "3.5rem auto 0",
+          padding: "0 1.5rem",
+        }}>
+          <DashboardMockup />
+          {/* fade bottom */}
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0, height: 120,
+            background: "linear-gradient(to top, var(--bg), transparent)",
+            pointerEvents: "none",
+          }} />
         </div>
       </section>
 
-      {/* ── PROBLEM: CITATION GAP ── */}
-      <section
-        style={{
-          padding: "5rem 1.5rem",
-          position: "relative",
-          overflow: "hidden",
-        }}
-        id="audit"
-      >
-        <div
-          className="aura-section"
-          style={{ top: "50%", right: -200, transform: "translateY(-50%)" }}
-        />
-        <div style={{ maxWidth: 860, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          {/* section label */}
-          <p
-            style={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              letterSpacing: "0.12em",
-              color: "var(--purple-bright)",
-              textTransform: "uppercase",
-              marginBottom: "1rem",
-            }}
-          >
-            The Citation Gap
-          </p>
-          <h2
-            className="font-display"
-            style={{
-              fontSize: "clamp(1.8rem, 4vw, 2.8rem)",
-              fontWeight: 800,
-              letterSpacing: "-0.025em",
-              lineHeight: 1.12,
-              marginBottom: "1rem",
-              maxWidth: 600,
-            }}
-          >
-            boAt is mentioned in 65% of AI queries.
-            <br />
-            <span style={{ color: "var(--danger)" }}>
-              Their site is cited 0 times on Perplexity.
-            </span>
-          </h2>
-          <p
-            style={{
-              color: "var(--text-muted)",
-              fontSize: "0.95rem",
-              maxWidth: 520,
-              lineHeight: 1.65,
-              marginBottom: "3rem",
-            }}
-          >
-            We audited 43 queries across ChatGPT and Perplexity. boAt fed the AI
-            ecosystem with brand awareness and captured none of the citation
-            authority. Third-party sites did.
-          </p>
+      {/* ── LOGO STRIP ── */}
+      <section style={{ padding: "4rem 1.5rem 3rem" }}>
+        <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-subtle)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, marginBottom: "2rem" }}>
+          We&apos;ve audited India&apos;s leading brands
+        </p>
+        <div style={{
+          display: "flex", gap: "2.5rem", justifyContent: "center",
+          alignItems: "center", flexWrap: "wrap",
+        }}>
+          {["boAt", "Zerodha", "Zoho", "Cult.fit", "MakeMyTrip", "Minimalist"].map(b => (
+            <span key={b} className="font-display" style={{
+              fontSize: "1rem", fontWeight: 700,
+              color: "var(--text-subtle)", letterSpacing: "-0.01em",
+              opacity: 0.5,
+            }}>{b}</span>
+          ))}
+        </div>
+      </section>
 
-          {/* Citation cards row */}
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-            {/* Mention rate */}
-            <div
-              className="card card-purple"
-              style={{ padding: "1.75rem 2rem", flex: 1, minWidth: 220 }}
-            >
-              <p
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                Brand mention rate
-              </p>
-              <p
-                className="font-display"
-                style={{
-                  fontSize: "3rem",
-                  fontWeight: 800,
-                  letterSpacing: "-0.04em",
-                  color: "var(--purple-bright)",
-                  lineHeight: 1,
-                }}
-              >
-                <Counter end={65} suffix="%" />
-              </p>
-              <p
-                style={{
-                  fontSize: "0.78rem",
-                  color: "var(--text-muted)",
-                  marginTop: "0.4rem",
-                }}
-              >
-                across ChatGPT queries
-              </p>
+      <div className="divider" style={{ maxWidth: 900, margin: "0 auto" }} />
+
+      {/* ── FEATURES ── */}
+      <section id="features" style={{ padding: "6rem 1.5rem" }}>
+        <div style={{ maxWidth: 1060, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "4rem" }}>
+            <p style={{ fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.12em", color: "var(--purple-bright)", textTransform: "uppercase", marginBottom: "0.75rem" }}>
+              What Marrai tracks
+            </p>
+            <h2 className="font-display" style={{
+              fontSize: "clamp(1.8rem, 4vw, 3rem)",
+              fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1,
+            }}>
+              Meet the new-gen<br />AEO research experience
+            </h2>
+          </div>
+
+          {/* Feature row 1 */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem", marginBottom: "1.25rem" }}>
+            {/* Citation gap card */}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <CitationGapCard />
+              <div style={{ padding: "0 1.5rem 1.5rem" }}>
+                <h3 className="font-display" style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.4rem", letterSpacing: "-0.02em" }}>
+                  Citation gap analysis
+                </h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
+                  See exactly which third-party domains YouTube, Reddit, review sites are capturing the citations that should be going to your site.
+                </p>
+              </div>
             </div>
 
-            {/* Own-site citation */}
-            <div className="card" style={{ padding: "1.75rem 2rem", flex: 1, minWidth: 220 }}>
-              <p
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                Own-site citation (Perplexity)
-              </p>
-              <p
-                className="font-display"
-                style={{
-                  fontSize: "3rem",
-                  fontWeight: 800,
-                  letterSpacing: "-0.04em",
-                  color: "var(--danger)",
-                  lineHeight: 1,
-                }}
-              >
-                <Counter end={0} suffix="%" />
-              </p>
-              <p
-                style={{
-                  fontSize: "0.78rem",
-                  color: "var(--text-muted)",
-                  marginTop: "0.4rem",
-                }}
-              >
-                zero times across 43 queries
-              </p>
+            {/* Mention monitor card */}
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <MentionCard />
+              <div style={{ padding: "0 1.5rem 1.5rem" }}>
+                <h3 className="font-display" style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.4rem", letterSpacing: "-0.02em" }}>
+                  Cross-platform mention rate
+                </h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
+                  Track how often your brand surfaces across ChatGPT, Perplexity, Gemini, and Claude broken down by query type and intent.
+                </p>
+              </div>
             </div>
+          </div>
 
-            {/* Who's stealing citations */}
-            <div className="card" style={{ padding: "1.75rem 2rem", flex: "2", minWidth: 280 }}>
-              <p
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "1.25rem",
-                }}
-              >
-                Who captures citations instead
+          {/* Feature row 2 — wide card */}
+          <div className="card card-purple" style={{ padding: "2.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "center" }}>
+            <div>
+              <p style={{ fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.1em", color: "var(--purple-bright)", textTransform: "uppercase", marginBottom: "0.75rem" }}>
+                Real audit data
               </p>
+              <h3 className="font-display" style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.025em", lineHeight: 1.15, marginBottom: "1rem" }}>
+                Five query types.<br />One complete picture.
+              </h3>
+              <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+                We run Category Discovery, Brand Comparison, Brand Direct, Problem/Solution, and High-Intent Decision queries the actual questions your customers ask AI platforms before they buy.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                {["Category discovery", "Brand comparison", "Brand direct", "Problem/solution", "High intent"].map(t => (
+                  <span key={t} style={{
+                    fontSize: "0.75rem", fontWeight: 500,
+                    padding: "0.25rem 0.75rem", borderRadius: 9999,
+                    background: "rgba(124,58,237,0.15)",
+                    border: "1px solid rgba(124,58,237,0.3)",
+                    color: "#C4B5FD",
+                  }}>{t}</span>
+                ))}
+              </div>
+            </div>
+            {/* stat block */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               {[
-                { name: "YouTube", pct: 23.5, color: "var(--purple-bright)" },
-                { name: "Reddit", pct: 16.7, color: "#A78BFA" },
-                { name: "Gadgets360", pct: 6.2, color: "#818CF8" },
-                { name: "Cashify", pct: 5.1, color: "var(--text-subtle)" },
-              ].map(({ name, pct, color }) => (
-                <div
-                  key={name}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    marginBottom: "0.6rem",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "0.78rem",
-                      color: "var(--text-muted)",
-                      width: 80,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {name}
-                  </span>
-                  <CitationBar pct={(pct / 30) * 100} color={color} />
-                  <span
-                    style={{
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      color: "var(--text-muted)",
-                      width: 36,
-                      textAlign: "right",
-                    }}
-                  >
-                    {pct}%
-                  </span>
+                { num: 65, suffix: "%", label: "boAt mention rate on ChatGPT", color: "var(--purple-bright)" },
+                { num: 0, suffix: "%", label: "boAt cited on Perplexity", color: "var(--danger)" },
+                { num: 43, suffix: "", label: "queries per platform", color: "var(--purple-bright)" },
+                { num: 10, suffix: "", label: "Indian brands being audited", color: "var(--purple-bright)" },
+              ].map((s, i) => (
+                <div key={i} style={{
+                  background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: "var(--radius-md)", padding: "1.25rem",
+                }}>
+                  <p className="font-display" style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1, color: s.color }}>
+                    <Counter end={s.num} suffix={s.suffix} />
+                  </p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.35rem", lineHeight: 1.4 }}>{s.label}</p>
                 </div>
               ))}
             </div>
           </div>
-
-          <p
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--text-subtle)",
-              marginTop: "1rem",
-            }}
-          >
-            Independent audit · 43 queries · ChatGPT + Perplexity · June 2025
-          </p>
         </div>
       </section>
 
-      <div className="divider" style={{ maxWidth: 860, margin: "0 auto" }} />
+      <div className="divider" style={{ maxWidth: 900, margin: "0 auto" }} />
 
-      {/* ── HOW IT WORKS ── */}
-      <section
-        id="how-it-works"
-        style={{ padding: "5rem 1.5rem", position: "relative" }}
-      >
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <p
-            style={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              letterSpacing: "0.12em",
-              color: "var(--purple-bright)",
-              textTransform: "uppercase",
-              marginBottom: "1rem",
-            }}
-          >
-            How Marrai works
-          </p>
-          <h2
-            className="font-display"
-            style={{
-              fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)",
-              fontWeight: 800,
-              letterSpacing: "-0.025em",
-              marginBottom: "3rem",
-              maxWidth: 480,
-              lineHeight: 1.15,
-            }}
-          >
-            Continuous monitoring,
-            <br />
-            not one-time audits.
+      {/* ── FAQ ── */}
+      <section id="faq" style={{ padding: "6rem 1.5rem" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+          <p style={{ fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.12em", color: "var(--purple-bright)", textTransform: "uppercase", textAlign: "center", marginBottom: "0.75rem" }}>FAQ</p>
+          <h2 className="font-display" style={{
+            textAlign: "center", fontSize: "clamp(1.8rem, 4vw, 2.6rem)",
+            fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "0.5rem",
+          }}>
+            Frequently asked questions
           </h2>
-
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-            <Step
-              n="01"
-              title="Query your brand"
-              body="We run hundreds of queries across ChatGPT, Perplexity, and Gemini the same questions your customers are actually asking."
-            />
-            <Step
-              n="02"
-              title="Track every citation"
-              body="We record which domains get cited when your brand is mentioned. Are they linking to you or to YouTube, Reddit, and your competitors?"
-            />
-            <Step
-              n="03"
-              title="Close the gap"
-              body="Get a weekly report showing your mention rate, citation rate, and the exact domains intercepting your authority. Know what to fix."
-            />
-          </div>
-        </div>
-      </section>
-
-      <div className="divider" style={{ maxWidth: 860, margin: "0 auto" }} />
-
-      {/* ── AUDIT PORTFOLIO ── */}
-      <section style={{ padding: "5rem 1.5rem" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <p
-            style={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              letterSpacing: "0.12em",
-              color: "var(--purple-bright)",
-              textTransform: "uppercase",
-              marginBottom: "1rem",
-            }}
-          >
-            Research in progress
+          <p style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--text-muted)", marginBottom: "3rem" }}>
+            Haven&apos;t found what you&apos;re looking for?{" "}
+            <a href="mailto:hello@marrai.com" style={{ color: "var(--purple-bright)", textDecoration: "none" }}>Contact us.</a>
           </p>
-          <h2
-            className="font-display"
-            style={{
-              fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)",
-              fontWeight: 800,
-              letterSpacing: "-0.025em",
-              marginBottom: "0.75rem",
-              lineHeight: 1.15,
-            }}
-          >
-            We&apos;re auditing 10 Indian brands
-          </h2>
-          <p
-            style={{
-              color: "var(--text-muted)",
-              fontSize: "0.9rem",
-              marginBottom: "2.5rem",
-              maxWidth: 500,
-              lineHeight: 1.65,
-            }}
-          >
-            Independent research across every major D2C category. No brand paid for
-            this. We&apos;re building the evidence base for why AEO matters in India.
-          </p>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-              gap: "0.75rem",
-            }}
-          >
-            {[
-              { brand: "boAt", cat: "Consumer Electronics", done: true },
-              { brand: "Minimalist", cat: "Skincare", done: false },
-              { brand: "Cult.fit", cat: "Health & Fitness", done: false },
-              { brand: "Physics Wallah", cat: "EdTech", done: false },
-              { brand: "Zerodha", cat: "Fintech", done: false },
-              { brand: "Zoho", cat: "Indian SaaS", done: false },
-              { brand: "Policybazaar", cat: "Insurance", done: false },
-              { brand: "Oziva", cat: "Food & Nutrition", done: false },
-              { brand: "MakeMyTrip", cat: "Travel Tech", done: false },
-              { brand: "Indiahikes", cat: "Trekking", done: false },
-            ].map(({ brand, cat, done }) => (
-              <div
-                key={brand}
-                className={done ? "card card-purple" : "card"}
-                style={{ padding: "1rem 1.25rem" }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.4rem",
-                    marginBottom: "0.4rem",
-                  }}
-                >
-                  {done ? (
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: "var(--purple-bright)",
-                        flexShrink: 0,
-                        boxShadow: "0 0 8px var(--purple-bright)",
-                      }}
-                    />
-                  ) : (
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: "var(--text-subtle)",
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                  <span
-                    style={{
-                      fontSize: "0.875rem",
-                      fontWeight: 600,
-                      color: done ? "var(--text)" : "var(--text-muted)",
-                    }}
-                  >
-                    {brand}
-                  </span>
-                </div>
-                <p
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "var(--text-subtle)",
-                    paddingLeft: "1.2rem",
-                  }}
-                >
-                  {cat}
-                </p>
-              </div>
-            ))}
-          </div>
+          <FAQ />
         </div>
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section
-        style={{
-          padding: "6rem 1.5rem 8rem",
-          textAlign: "center",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          className="aura-section"
-          style={{
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 700,
-            height: 500,
-          }}
-        />
-        <div style={{ maxWidth: 580, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <h2
-            className="font-display"
-            style={{
-              fontSize: "clamp(1.8rem, 4vw, 3rem)",
-              fontWeight: 800,
-              letterSpacing: "-0.03em",
-              lineHeight: 1.1,
-              marginBottom: "1rem",
-            }}
-          >
-            Know where you stand
-            <br />
-            <span style={{ color: "var(--purple-bright)" }}>before your competitors do.</span>
-          </h2>
-          <p
-            style={{
-              color: "var(--text-muted)",
-              fontSize: "0.95rem",
-              marginBottom: "2rem",
-              lineHeight: 1.65,
-            }}
-          >
-            Get early access and we&apos;ll run a free audit on your brand before
-            we launch. Limited to 20 brands.
-          </p>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <WaitlistForm compact />
+      <section style={{ padding: "6rem 1.5rem 8rem", textAlign: "center", position: "relative", overflow: "hidden" }}>
+        {/* centered glow */}
+        <div style={{
+          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          width: 700, height: 500,
+          background: "radial-gradient(ellipse, rgba(124,58,237,0.22) 0%, transparent 65%)",
+          filter: "blur(60px)", pointerEvents: "none",
+        }} />
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 560, margin: "0 auto" }}>
+          {/* icon */}
+          <div style={{
+            width: 64, height: 64, borderRadius: 16, margin: "0 auto 1.5rem",
+            background: "linear-gradient(135deg, #7C3AED, #A855F7)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 40px rgba(124,58,237,0.5)",
+          }}>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <circle cx="14" cy="14" r="10" stroke="white" strokeWidth="1.8" strokeOpacity="0.5"/>
+              <circle cx="14" cy="14" r="4" fill="white"/>
+              <path d="M14 4v4M14 20v4M4 14h4M20 14h4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeOpacity="0.6"/>
+            </svg>
           </div>
+          <h2 className="font-display" style={{
+            fontSize: "clamp(2rem, 4.5vw, 3.2rem)",
+            fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, marginBottom: "1rem",
+          }}>
+            Outrank everyone.<br />
+            <span style={{ color: "var(--purple-bright)" }}>Starting now.</span>
+          </h2>
+          <p style={{ fontSize: "0.95rem", color: "var(--text-muted)", marginBottom: "2rem", lineHeight: 1.65 }}>
+            Marrai audits your brand across AI answer engines and shows you exactly how to close the citation gap. Get early access and we&apos;ll run your brand free.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.75rem" }}>
+            <WaitlistForm size="compact" />
+          </div>
+          <p style={{ fontSize: "0.72rem", color: "var(--text-subtle)" }}>
+            No credit card required · 14-day free trial at launch
+          </p>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer
-        style={{
-          borderTop: "1px solid var(--border-subtle)",
-          padding: "2rem 1.5rem",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 860,
-            margin: "0 auto",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "1rem",
-          }}
-        >
-          <span
-            className="font-display"
-            style={{ fontWeight: 800, fontSize: "1rem", letterSpacing: "-0.02em" }}
-          >
-            marrai<span style={{ color: "var(--purple-bright)" }}>.</span>
-          </span>
-          <p style={{ fontSize: "0.78rem", color: "var(--text-subtle)" }}>
-            India&apos;s first AEO monitoring platform · &copy; 2025 Marrai
-          </p>
-          <div style={{ display: "flex", gap: "1.25rem" }}>
-            {["Privacy", "Terms"].map((l) => (
-              <a
-                key={l}
-                href="#"
-                style={{
-                  fontSize: "0.78rem",
-                  color: "var(--text-subtle)",
-                  textDecoration: "none",
-                }}
-              >
-                {l}
-              </a>
+      <footer style={{ borderTop: "1px solid var(--border-subtle)", padding: "2.5rem 1.5rem" }}>
+        <div style={{
+          maxWidth: 1060, margin: "0 auto",
+          display: "grid", gridTemplateColumns: "1fr auto auto auto",
+          gap: "3rem", alignItems: "start",
+        }}>
+          <div>
+            <div className="font-display" style={{ fontWeight: 800, fontSize: "1rem", letterSpacing: "-0.02em", marginBottom: "0.5rem" }}>
+              marrai<span style={{ color: "var(--purple-bright)" }}>.</span>
+            </div>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", maxWidth: 200, lineHeight: 1.6 }}>
+              Experience the next generation of AEO analytics.
+            </p>
+          </div>
+          <div>
+            <p style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-subtle)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.75rem" }}>Platform</p>
+            {["Audit tool", "Waitlist", "Research"].map(l => (
+              <p key={l} style={{ marginBottom: "0.4rem" }}>
+                <a href="#" style={{ fontSize: "0.82rem", color: "var(--text-muted)", textDecoration: "none" }}>{l}</a>
+              </p>
+            ))}
+          </div>
+          <div>
+            <p style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-subtle)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.75rem" }}>Legal</p>
+            {["Privacy policy", "Terms of service"].map(l => (
+              <p key={l} style={{ marginBottom: "0.4rem" }}>
+                <a href="#" style={{ fontSize: "0.82rem", color: "var(--text-muted)", textDecoration: "none" }}>{l}</a>
+              </p>
+            ))}
+          </div>
+          <div>
+            <p style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-subtle)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.75rem" }}>Get in touch</p>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>hello@marrai.com</p>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>Hyderabad, India</p>
+          </div>
+        </div>
+        <div style={{ maxWidth: 1060, margin: "2rem auto 0", paddingTop: "1.5rem", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={{ fontSize: "0.75rem", color: "var(--text-subtle)" }}>©2025 Marrai. All rights reserved.</p>
+          <div style={{ display: "flex", gap: "1rem" }}>
+            {["LinkedIn", "Twitter"].map(s => (
+              <a key={s} href="#" style={{ fontSize: "0.75rem", color: "var(--text-subtle)", textDecoration: "none" }}>{s}</a>
             ))}
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
