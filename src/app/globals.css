@@ -1,26 +1,239 @@
 @import "tailwindcss";
 
+/* ── Marrai Design Tokens ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:             #09090b;
+  --surface:        #111116;
+  --surface-2:      #18181f;
+  --purple-core:    #7C3AED;
+  --purple-bright:  #A855F7;
+  --purple-dim:     rgba(124, 58, 237, 0.12);
+  --purple-glow:    rgba(124, 58, 237, 0.35);
+  --text:           #F4F4F5;
+  --text-muted:     #71717A;
+  --text-subtle:    #3F3F46;
+  --border:         rgba(124, 58, 237, 0.18);
+  --border-subtle:  rgba(255, 255, 255, 0.06);
+  --danger:         #EF4444;
+  --radius-sm:      0.25rem;
+  --radius-md:      0.5rem;
+  --radius-lg:      1rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:    var(--bg);
+  --color-foreground:    var(--text);
+  --color-surface:       var(--surface);
+  --color-surface-2:     var(--surface-2);
+  --color-purple:        var(--purple-core);
+  --color-purple-bright: var(--purple-bright);
+  --color-muted:         var(--text-muted);
+  --color-border:        var(--border);
+  --color-danger:        var(--danger);
+  --font-display:        'Bricolage Grotesque', sans-serif;
+  --font-body:           'Inter', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── Typography ── */
+.font-display { font-family: var(--font-display), sans-serif; }
+
+/* ── Aura / Glow Effects ── */
+.aura-hero {
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 600px;
+  background: radial-gradient(ellipse at center, rgba(124,58,237,0.28) 0%, rgba(109,40,217,0.12) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(40px);
+}
+
+.aura-section {
+  position: absolute;
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse at center, rgba(124,58,237,0.18) 0%, transparent 65%);
+  pointer-events: none;
+  filter: blur(60px);
+  z-index: 0;
+}
+
+/* ── Card Styles ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-purple {
+  background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, var(--surface) 60%);
+  border: 1px solid var(--border);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* ── Stat Number Animation ── */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.stat-appear { animation: count-up 0.6s ease forwards; }
+
+/* ── Pill / Badge ── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.pill-purple {
+  background: rgba(124,58,237,0.18);
+  border: 1px solid rgba(124,58,237,0.35);
+  color: #C4B5FD;
+}
+
+.pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--purple-bright);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ── Platform Name Cycle ── */
+@keyframes platform-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes platform-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-12px); }
+}
+
+.platform-enter { animation: platform-in 0.4s ease forwards; }
+.platform-exit  { animation: platform-out 0.3s ease forwards; }
+
+/* ── Input ── */
+.input-waitlist {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.input-waitlist:focus {
+  border-color: rgba(124,58,237,0.5);
+  background: rgba(124,58,237,0.06);
+}
+
+.input-waitlist::placeholder { color: var(--text-muted); }
+
+/* ── Button ── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--purple-core);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  background: var(--purple-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(124,58,237,0.4);
+}
+
+.btn-primary:active { transform: translateY(0); }
+
+/* ── Divider ── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-subtle) 30%, var(--border-subtle) 70%, transparent);
+}
+
+/* ── Scroll-reveal ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.reveal { animation: fade-up 0.7s ease forwards; }
+.reveal-delay-1 { animation-delay: 0.1s; opacity: 0; }
+.reveal-delay-2 { animation-delay: 0.2s; opacity: 0; }
+.reveal-delay-3 { animation-delay: 0.3s; opacity: 0; }
+
+/* ── Citation Gap Visual ── */
+.citation-bar {
+  height: 8px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+}
+
+.citation-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Noise texture overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
 }
